@@ -1,8 +1,17 @@
 /*!
-	Colorbox 1.6.4
+	Colorbox 1.6.5 - Patch of v 1.64
 	license: MIT
 	http://www.jacklmoore.com/colorbox
+	
+	Summary of Changes : github.com/gtbu 9/2025
+    title and html: The title and html settings are now sanitized in the prep and load functions respectively, 
+	before being passed to .html().
+    Internationalization Strings: The current, previous, next, and close strings are now sanitized with escapeHtml 
+	before being used to create the UI.
+    Slideshow Controls: The slideshowStart and slideshowStop strings are also sanitized.
+    Error Messages: The imgError and xhrError messages are sanitized to prevent XSS through error conditions.	
 */
+
 (function ($, document, window) {
 	var
 	// Default settings object.
@@ -80,7 +89,7 @@
 			return this.rel;
 		},
 		href: function() {
-			// using this.href would give the absolute url, when the href may have been intended as a selector (e.g. '#container')
+			// using this.href would give the absolute url, when the href may have been inteded as a selector (e.g. '#container')
 			return $(this).attr('href');
 		},
 		title: function() {
@@ -155,8 +164,8 @@
 	$prev,
 	$close,
 	$groupControls,
-	$events = $('<a/>'), // $({}) would be preferred, but there is an issue with jQuery 1.4.2
-
+	$events = $({}), 
+	
 	// Variables for cached values or use across multiple functions
 	settings,
 	interfaceHeight,
@@ -179,6 +188,15 @@
 	// HELPER FUNCTIONS
 	// ****************
 
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+	
 	// Convenience function for creating new jQuery objects
 	function $tag(tag, id, css) {
 		var element = document.createElement(tag);
@@ -317,7 +335,7 @@
 
 		function start() {
 			$slideshow
-				.html(settings.get('slideshowStop'))
+				.html(escapeHtml(settings.get('slideshowStop')))
 				.unbind(click)
 				.one(click, stop);
 
@@ -336,7 +354,7 @@
 				.unbind(event_load, clear);
 
 			$slideshow
-				.html(settings.get('slideshowStart'))
+				.html(escapeHtml(settings.get('slideshowStart')))
 				.unbind(click)
 				.one(click, function () {
 					publicMethod.next();
@@ -455,7 +473,7 @@
 			}).show();
 
 			if (settings.get('closeButton')) {
-				$close.html(settings.get('close')).appendTo($content);
+				$close.html(escapeHtml(settings.get('close'))).appendTo($content);
 			} else {
 				$close.appendTo('<div/>'); // replace with .detach() when dropping jQuery < 1.4
 			}
@@ -571,7 +589,6 @@
 					$(document).on('click.'+prefix, '.'+boxElement, clickHandler);
 				} else {
 					// For jQuery 1.3.x -> 1.6.x
-					// This code is never reached in jQuery 1.9, so do not contact me about 'live' being removed.
 					// This is not here for jQuery 1.9, it's here for legacy users.
 					$('.'+boxElement).live('click.'+prefix, clickHandler);
 				}
@@ -834,16 +851,16 @@
 			};
 
 
-			$title.html(settings.get('title')).show();
+			$title.html(escapeHtml(settings.get('title'))).show();
 			$loaded.show();
 
 			if (total > 1) { // handle grouping
 				if (typeof settings.get('current') === "string") {
-					$current.html(settings.get('current').replace('{current}', index + 1).replace('{total}', total)).show();
+					$current.html(escapeHtml(settings.get('current')).replace('{current}', index + 1).replace('{total}', total)).show();
 				}
 
-				$next[(settings.get('loop') || index < total - 1) ? "show" : "hide"]().html(settings.get('next'));
-				$prev[(settings.get('loop') || index) ? "show" : "hide"]().html(settings.get('previous'));
+				$next[(settings.get('loop') || index < total - 1) ? "show" : "hide"]().html(escapeHtml(settings.get('next')));
+				$prev[(settings.get('loop') || index) ? "show" : "hide"]().html(escapeHtml(settings.get('previous')));
 
 				slideshow();
 
@@ -965,7 +982,7 @@
 			// to avoid problems with DOM-ready JS that might be trying to run in that iframe.
 			prep(" ");
 		} else if (settings.get('html')) {
-			prep(settings.get('html'));
+			prep(escapeHtml(settings.get('html')));
 		} else if (isImage(settings, href)) {
 
 			href = retinaUrl(settings, href);
@@ -975,7 +992,7 @@
 			$(photo)
 			.addClass(prefix + 'Photo')
 			.bind('error.'+prefix,function () {
-				prep($tag(div, 'Error').html(settings.get('imgError')));
+				prep($tag(div, 'Error').html(escapeHtml(settings.get('imgError'))));
 			})
 			.one('load', function () {
 				if (request !== requests) {
@@ -1030,7 +1047,7 @@
 		} else if (href) {
 			$loadingBay.load(href, settings.get('data'), function (data, status) {
 				if (request === requests) {
-					prep(status === 'error' ? $tag(div, 'Error').html(settings.get('xhrError')) : $(this).contents());
+					prep(status === 'error' ? $tag(div, 'Error').html(escapeHtml(settings.get('xhrError'))) : $(this).contents());
 				}
 			});
 		}
@@ -1103,3 +1120,4 @@
 	publicMethod.settings = defaults;
 
 }(jQuery, document, window));
+	
